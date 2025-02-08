@@ -10,6 +10,10 @@ const Header = () => {
         <li>ANASAYFA</li>
         <li>İLETİŞİM</li>
         <li>BİLGİ</li>
+        <li><a href="/login" target="_blank" rel="noopener noreferrer">
+          GİRİŞ YAP
+        </a></li>
+        
       </ul>
     </div>
   );
