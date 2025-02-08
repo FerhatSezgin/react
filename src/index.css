@@ -1,1 +1,32 @@
+html,body,:root{
+    padding: 0;
+    margin: 0;
+    border: 0;
+    box-sizing: border-box;
+}
 
+.headerContanier{
+
+    border: 1px solid red;
+    background-color: yellow;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-right: 100px;
+}
+
+.logo {
+
+    width: 100px;   
+    height: 100px; 
+
+}
+
+.list{
+
+    display: flex;
+    list-style-type: none;
+    gap: 30px;
+    
+
+}
