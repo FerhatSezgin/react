@@ -6,6 +6,7 @@ const App = () => {
     <div>
    <Header/>
    ferrrrrrrr
+   orospu enes aaqbvc
    <Cards/>
     </div>
   )
