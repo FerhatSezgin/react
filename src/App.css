@@ -1,0 +1,448 @@
+/* ============ GENEL STILLER ============ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 20px;
+}
+
+.app {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 40px;
+  border-radius: 24px;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+  width: 100%;
+  max-width: 600px;
+}
+
+h1 {
+  text-align: center;
+  color: #1a1a2e;
+  margin-bottom: 30px;
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+
+/* ============ EKLEME FORMU ============ */
+.add-form {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 25px;
+  border-radius: 16px;
+  margin-bottom: 25px;
+}
+
+.input-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 15px;
+}
+
+.main-input {
+  flex: 1;
+  padding: 14px 18px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  background: white;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.main-input:focus {
+  outline: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.add-btn {
+  padding: 14px 28px;
+  background: #1a1a2e;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.add-btn:hover {
+  background: #0f3460;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.options-row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.option label {
+  color: white;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.option input[type="date"],
+.option select {
+  padding: 10px 14px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  background: white;
+}
+
+/* ============ FİLTRE BUTONLARI ============ */
+.filters {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  justify-content: center;
+}
+
+.filters button {
+  padding: 10px 20px;
+  border: 2px solid #e0e0e0;
+  background: white;
+  border-radius: 25px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #666;
+}
+
+.filters button:hover {
+  border-color: #667eea;
+  color: #667eea;
+}
+
+.filters button.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: transparent;
+  color: white;
+}
+
+/* ============ GÖREV LİSTESİ ============ */
+.todo-list {
+  list-style: none;
+  margin-bottom: 25px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.todo-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.todo-list::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 3px;
+}
+
+.todo-list::-webkit-scrollbar-thumb {
+  background: #667eea;
+  border-radius: 3px;
+}
+
+.todo-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  padding: 18px;
+  background: #f8f9fa;
+  border-radius: 14px;
+  margin-bottom: 12px;
+  transition: all 0.3s ease;
+  border-left: 4px solid transparent;
+}
+
+.todo-list li:hover {
+  transform: translateX(5px);
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* Öncelik renkleri */
+.todo-list li.priority-high {
+  border-left-color: #e74c3c;
+  background: linear-gradient(90deg, rgba(231, 76, 60, 0.08) 0%, #f8f9fa 100%);
+}
+
+.todo-list li.priority-normal {
+  border-left-color: #f39c12;
+}
+
+.todo-list li.priority-low {
+  border-left-color: #27ae60;
+}
+
+/* Tamamlanan */
+.todo-list li.completed {
+  background: #e8f5e9;
+  opacity: 0.7;
+}
+
+.todo-list li.completed .todo-text {
+  text-decoration: line-through;
+  color: #888;
+}
+
+/* Gecikmiş */
+.todo-list li.overdue {
+  background: linear-gradient(90deg, rgba(231, 76, 60, 0.15) 0%, #f8f9fa 100%);
+  border-left-color: #c0392b;
+}
+
+/* Boş durum */
+.empty-state {
+  text-align: center;
+  padding: 40px !important;
+  color: #888;
+  font-size: 16px;
+  background: #f8f9fa !important;
+  border-left: none !important;
+}
+
+/* Checkbox */
+.todo-list li input[type="checkbox"] {
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  accent-color: #667eea;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+/* İçerik */
+.todo-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.todo-text {
+  display: block;
+  font-size: 16px;
+  color: #333;
+  font-weight: 500;
+  margin-bottom: 8px;
+  word-wrap: break-word;
+}
+
+.todo-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.priority-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+
+.priority-badge.high {
+  background: rgba(231, 76, 60, 0.15);
+  color: #c0392b;
+}
+
+.priority-badge.normal {
+  background: rgba(243, 156, 18, 0.15);
+  color: #d68910;
+}
+
+.priority-badge.low {
+  background: rgba(39, 174, 96, 0.15);
+  color: #1e8449;
+}
+
+.due-date {
+  padding: 4px 10px;
+  background: rgba(102, 126, 234, 0.15);
+  color: #667eea;
+  border-radius: 20px;
+}
+
+.due-date.overdue {
+  background: rgba(231, 76, 60, 0.2);
+  color: #c0392b;
+  font-weight: 600;
+}
+
+.due-date.today {
+  background: rgba(243, 156, 18, 0.2);
+  color: #d68910;
+  font-weight: 600;
+}
+
+.created-date {
+  color: #999;
+}
+
+/* Düzenleme input */
+.edit-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid #667eea;
+  border-radius: 8px;
+  font-size: 16px;
+  font-family: inherit;
+}
+
+/* Aksiyon butonları */
+.todo-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.todo-actions button {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.edit-btn {
+  background: rgba(102, 126, 234, 0.15);
+}
+
+.edit-btn:hover {
+  background: rgba(102, 126, 234, 0.3);
+  transform: scale(1.1);
+}
+
+.delete-btn {
+  background: rgba(231, 76, 60, 0.15);
+}
+
+.delete-btn:hover {
+  background: rgba(231, 76, 60, 0.3);
+  transform: scale(1.1);
+}
+
+.save-btn {
+  background: rgba(39, 174, 96, 0.2);
+  color: #27ae60;
+}
+
+.save-btn:hover {
+  background: rgba(39, 174, 96, 0.4);
+}
+
+.cancel-btn {
+  background: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+}
+
+.cancel-btn:hover {
+  background: rgba(231, 76, 60, 0.4);
+}
+
+/* ============ İSTATİSTİKLER ============ */
+.stats {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 14px;
+  margin-bottom: 20px;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-number {
+  display: block;
+  font-size: 28px;
+  font-weight: 700;
+  color: #667eea;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.stat-item.overdue .stat-number {
+  color: #e74c3c;
+}
+
+/* ============ TEMİZLE BUTONU ============ */
+.clear-btn {
+  width: 100%;
+  padding: 14px;
+  background: transparent;
+  border: 2px dashed #e74c3c;
+  color: #e74c3c;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.clear-btn:hover {
+  background: #e74c3c;
+  color: white;
+  border-style: solid;
+}
+
+/* ============ RESPONSİVE ============ */
+@media (max-width: 500px) {
+  .app {
+    padding: 25px;
+  }
+  
+  h1 {
+    font-size: 2rem;
+  }
+  
+  .options-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .option {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .filters {
+    flex-wrap: wrap;
+  }
+  
+  .stats {
+    gap: 15px;
+  }
+  
+  .stat-number {
+    font-size: 22px;
+  }
+}
