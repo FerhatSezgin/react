@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 import "./App.css"
 
-// 🎯 TAVSİYE 1: Kategoriler için sabit tanımla (magic string kullanma)
+// Kategoriler
 const CATEGORIES = [
   { id: "personal", name: "Kişisel", emoji: "👤", color: "#9b59b6" },
   { id: "work", name: "İş", emoji: "💼", color: "#3498db" },
@@ -23,7 +23,15 @@ const App = () => {
     return saved ? JSON.parse(saved) : []
   })
   
-  // 🎯 TAVSİYE 2: Dark mode için tema state'i
+  // 🗑️ ÇÖP KUTUSU - Silinen görevler burada
+  const [trash, setTrash] = useState(() => {
+    const saved = localStorage.getItem("todos-trash")
+    return saved ? JSON.parse(saved) : []
+  })
+  
+  // 🗑️ Çöp kutusu görünürlüğü
+  const [showTrash, setShowTrash] = useState(false)
+  
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem("darkMode")
     return saved ? JSON.parse(saved) : window.matchMedia("(prefers-color-scheme: dark)").matches
@@ -35,15 +43,20 @@ const App = () => {
   const [category, setCategory] = useState("personal")
   const [filter, setFilter] = useState("all")
   const [categoryFilter, setCategoryFilter] = useState("all")
-  const [searchQuery, setSearchQuery] = useState("")  // 🎯 TAVSİYE 3: Arama
+  const [searchQuery, setSearchQuery] = useState("")
   const [editingId, setEditingId] = useState(null)
   const [editText, setEditText] = useState("")
-  const [showConfetti, setShowConfetti] = useState(false)  // 🎯 TAVSİYE 4: Konfeti efekti
+  const [showConfetti, setShowConfetti] = useState(false)
 
   // ============ EFFECTS ============
   useEffect(() => {
     localStorage.setItem("todos-pro", JSON.stringify(todos))
   }, [todos])
+
+  // Çöp kutusunu localStorage'a kaydet
+  useEffect(() => {
+    localStorage.setItem("todos-trash", JSON.stringify(trash))
+  }, [trash])
 
   useEffect(() => {
     localStorage.setItem("darkMode", JSON.stringify(darkMode))
@@ -99,16 +112,58 @@ const App = () => {
     setPriority("normal")
   }, [inputValue, dueDate, priority, category])
 
-  const deleteTodo = useCallback((id) => {
-    setTodos(prev => prev.filter(todo => todo.id !== id))
+  // 🗑️ Çöp kutusuna taşı (kalıcı silme değil)
+  const moveToTrash = useCallback((id) => {
+    const todoToTrash = todos.find(t => t.id === id)
+    if (todoToTrash) {
+      // Silinme zamanını ekle
+      const trashedTodo = { ...todoToTrash, deletedAt: new Date().toISOString() }
+      setTrash(prev => [...prev, trashedTodo])
+      setTodos(prev => prev.filter(t => t.id !== id))
+    }
+  }, [todos])
+
+  // 🗑️ Çöp kutusundan geri al
+  const restoreFromTrash = useCallback((id) => {
+    const todoToRestore = trash.find(t => t.id === id)
+    if (todoToRestore) {
+      // deletedAt'ı kaldır ve geri ekle
+      const { deletedAt, ...restoredTodo } = todoToRestore
+      setTodos(prev => [...prev, restoredTodo])
+      setTrash(prev => prev.filter(t => t.id !== id))
+    }
+  }, [trash])
+
+  // 🗑️ Kalıcı olarak sil
+  const deletePermanently = useCallback((id) => {
+    setTrash(prev => prev.filter(t => t.id !== id))
   }, [])
 
-  // 🎯 TAVSİYE 5: Konfeti efekti ile tamamlama
+  // 🗑️ Çöp kutusunu boşalt
+  const emptyTrash = useCallback(() => {
+    if (trash.length > 0 && window.confirm(`${trash.length} görev kalıcı olarak silinecek. Emin misin?`)) {
+      setTrash([])
+    }
+  }, [trash.length])
+
+  // 🗑️ Tamamlananları çöp kutusuna taşı
+  const moveCompletedToTrash = useCallback(() => {
+    const completedTodos = todos.filter(t => t.completed)
+    if (completedTodos.length === 0) return
+    
+    const trashedTodos = completedTodos.map(todo => ({
+      ...todo,
+      deletedAt: new Date().toISOString()
+    }))
+    
+    setTrash(prev => [...prev, ...trashedTodos])
+    setTodos(prev => prev.filter(t => !t.completed))
+  }, [todos])
+
   const toggleComplete = useCallback((id) => {
     setTodos(prev => prev.map(todo => {
       if (todo.id === id) {
         const newCompleted = !todo.completed
-        // Tamamlandığında konfeti göster
         if (newCompleted) {
           setShowConfetti(true)
           setTimeout(() => setShowConfetti(false), 2000)
@@ -147,25 +202,18 @@ const App = () => {
     if (e.key === "Escape") cancelEdit()
   }
 
-  const clearCompleted = () => {
-    setTodos(prev => prev.filter(todo => !todo.completed))
-  }
-
   // ============ FİLTRELEME & SIRALAMA ============
   const filteredTodos = todos
     .filter(todo => {
-      // Tamamlanma durumu filtresi
       if (filter === "active") return !todo.completed
       if (filter === "completed") return todo.completed
       return true
     })
     .filter(todo => {
-      // Kategori filtresi
       if (categoryFilter !== "all") return todo.category === categoryFilter
       return true
     })
     .filter(todo => {
-      // 🎯 TAVSİYE 3: Arama filtresi
       if (searchQuery.trim()) {
         return todo.text.toLowerCase().includes(searchQuery.toLowerCase())
       }
@@ -174,9 +222,7 @@ const App = () => {
 
   const priorityOrder = { high: 0, normal: 1, low: 2 }
   const sortedTodos = [...filteredTodos].sort((a, b) => {
-    // Önce tamamlanmamışlar
     if (a.completed !== b.completed) return a.completed ? 1 : -1
-    // Sonra öncelik
     return priorityOrder[a.priority] - priorityOrder[b.priority]
   })
 
@@ -191,10 +237,25 @@ const App = () => {
     return CATEGORIES.find(c => c.id === categoryId) || CATEGORIES[0]
   }
 
+  // Silinen görevin ne kadar önce silindiğini hesapla
+  const getTimeAgo = (dateString) => {
+    const now = new Date()
+    const deleted = new Date(dateString)
+    const diffMs = now - deleted
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMins / 60)
+    const diffDays = Math.floor(diffHours / 24)
+    
+    if (diffMins < 1) return "Az önce"
+    if (diffMins < 60) return `${diffMins} dk önce`
+    if (diffHours < 24) return `${diffHours} saat önce`
+    return `${diffDays} gün önce`
+  }
+
   // ============ JSX ============
   return (
     <div className={`app ${darkMode ? "dark" : ""}`}>
-      {/* 🎯 TAVSİYE 4: Konfeti efekti */}
+      {/* Konfeti efekti */}
       {showConfetti && (
         <div className="confetti-container">
           {[...Array(50)].map((_, i) => (
@@ -210,17 +271,75 @@ const App = () => {
       {/* Header */}
       <header className="header">
         <h1>✨ Todo Pro</h1>
-        {/* 🎯 TAVSİYE 2: Tema değiştirici */}
-        <button 
-          className="theme-toggle"
-          onClick={() => setDarkMode(!darkMode)}
-          title={darkMode ? "Açık Tema" : "Koyu Tema"}
-        >
-          {darkMode ? "☀️" : "🌙"}
-        </button>
+        <div className="header-actions">
+          {/* 🗑️ Çöp kutusu butonu */}
+          <button 
+            className={`trash-toggle ${showTrash ? "active" : ""} ${trash.length > 0 ? "has-items" : ""}`}
+            onClick={() => setShowTrash(!showTrash)}
+            title="Çöp Kutusu"
+          >
+            🗑️
+            {trash.length > 0 && <span className="trash-badge">{trash.length}</span>}
+          </button>
+          
+          <button 
+            className="theme-toggle"
+            onClick={() => setDarkMode(!darkMode)}
+            title={darkMode ? "Açık Tema" : "Koyu Tema"}
+          >
+            {darkMode ? "☀️" : "🌙"}
+          </button>
+        </div>
       </header>
 
-      {/* 🎯 TAVSİYE 6: İlerleme çubuğu */}
+      {/* 🗑️ ÇÖP KUTUSU PANELİ */}
+      {showTrash && (
+        <div className="trash-panel">
+          <div className="trash-header">
+            <h3>🗑️ Çöp Kutusu ({trash.length})</h3>
+            {trash.length > 0 && (
+              <button onClick={emptyTrash} className="empty-trash-btn">
+                Boşalt
+              </button>
+            )}
+          </div>
+          
+          {trash.length === 0 ? (
+            <div className="trash-empty">
+              <span>Çöp kutusu boş</span>
+            </div>
+          ) : (
+            <ul className="trash-list">
+              {trash.map(todo => (
+                <li key={todo.id} className="trash-item">
+                  <div className="trash-item-content">
+                    <span className="trash-item-text">{todo.text}</span>
+                    <span className="trash-item-time">{getTimeAgo(todo.deletedAt)}</span>
+                  </div>
+                  <div className="trash-item-actions">
+                    <button 
+                      onClick={() => restoreFromTrash(todo.id)} 
+                      className="restore-btn"
+                      title="Geri Al"
+                    >
+                      ↩️
+                    </button>
+                    <button 
+                      onClick={() => deletePermanently(todo.id)} 
+                      className="permanent-delete-btn"
+                      title="Kalıcı Sil"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {/* İlerleme çubuğu */}
       <div className="progress-container">
         <div className="progress-bar">
           <div 
@@ -280,7 +399,7 @@ const App = () => {
         </div>
       </div>
 
-      {/* 🎯 TAVSİYE 3: Arama */}
+      {/* Arama */}
       <div className="search-container">
         <span className="search-icon">🔍</span>
         <input
@@ -367,7 +486,6 @@ const App = () => {
                 `}
                 style={{ "--cat-color": catInfo.color }}
               >
-                {/* Kategori göstergesi */}
                 <div className="category-indicator" title={catInfo.name} />
                 
                 <label className="checkbox-container">
@@ -424,7 +542,8 @@ const App = () => {
                   ) : (
                     <>
                       <button onClick={() => startEditing(todo)} className="action-btn edit">✏️</button>
-                      <button onClick={() => deleteTodo(todo.id)} className="action-btn delete">🗑️</button>
+                      {/* 🗑️ Çöp kutusuna taşı (kalıcı silme değil) */}
+                      <button onClick={() => moveToTrash(todo.id)} className="action-btn delete">🗑️</button>
                     </>
                   )}
                 </div>
@@ -452,10 +571,10 @@ const App = () => {
         )}
       </div>
 
-      {/* Alt Aksiyonlar */}
+      {/* 🗑️ Tamamlananları Çöp Kutusuna Taşı */}
       {completedCount > 0 && (
-        <button onClick={clearCompleted} className="clear-btn">
-          🧹 Tamamlananları Temizle ({completedCount})
+        <button onClick={moveCompletedToTrash} className="clear-btn">
+          🗑️ Tamamlananları Çöpe Taşı ({completedCount})
         </button>
       )}
 
