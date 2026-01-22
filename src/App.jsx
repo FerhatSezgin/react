@@ -1,112 +1,143 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import "./App.css"
+
+// 🎯 TAVSİYE 1: Kategoriler için sabit tanımla (magic string kullanma)
+const CATEGORIES = [
+  { id: "personal", name: "Kişisel", emoji: "👤", color: "#9b59b6" },
+  { id: "work", name: "İş", emoji: "💼", color: "#3498db" },
+  { id: "shopping", name: "Alışveriş", emoji: "🛒", color: "#e67e22" },
+  { id: "health", name: "Sağlık", emoji: "💪", color: "#27ae60" },
+  { id: "learning", name: "Öğrenme", emoji: "📚", color: "#e74c3c" }
+]
+
+const PRIORITIES = [
+  { id: "low", name: "Düşük", emoji: "🟢" },
+  { id: "normal", name: "Normal", emoji: "🟡" },
+  { id: "high", name: "Yüksek", emoji: "🔴" }
+]
 
 const App = () => {
   // ============ STATE'LER ============
-  // localStorage'dan veri çekmeyi dene, yoksa boş dizi kullan
   const [todos, setTodos] = useState(() => {
-    const saved = localStorage.getItem("todos")
+    const saved = localStorage.getItem("todos-pro")
     return saved ? JSON.parse(saved) : []
   })
   
+  // 🎯 TAVSİYE 2: Dark mode için tema state'i
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem("darkMode")
+    return saved ? JSON.parse(saved) : window.matchMedia("(prefers-color-scheme: dark)").matches
+  })
+  
   const [inputValue, setInputValue] = useState("")
-  const [dueDate, setDueDate] = useState("")           // Son tarih
-  const [priority, setPriority] = useState("normal")   // Öncelik
-  const [filter, setFilter] = useState("all")          // Filtre: all, active, completed
-  const [editingId, setEditingId] = useState(null)     // Düzenlenen görev ID'si
-  const [editText, setEditText] = useState("")         // Düzenleme metni
+  const [dueDate, setDueDate] = useState("")
+  const [priority, setPriority] = useState("normal")
+  const [category, setCategory] = useState("personal")
+  const [filter, setFilter] = useState("all")
+  const [categoryFilter, setCategoryFilter] = useState("all")
+  const [searchQuery, setSearchQuery] = useState("")  // 🎯 TAVSİYE 3: Arama
+  const [editingId, setEditingId] = useState(null)
+  const [editText, setEditText] = useState("")
+  const [showConfetti, setShowConfetti] = useState(false)  // 🎯 TAVSİYE 4: Konfeti efekti
 
-  // ============ useEffect - localStorage'a Kaydet ============
-  // todos her değiştiğinde localStorage'a kaydet
+  // ============ EFFECTS ============
   useEffect(() => {
-    localStorage.setItem("todos", JSON.stringify(todos))
+    localStorage.setItem("todos-pro", JSON.stringify(todos))
   }, [todos])
 
+  useEffect(() => {
+    localStorage.setItem("darkMode", JSON.stringify(darkMode))
+    document.documentElement.setAttribute("data-theme", darkMode ? "dark" : "light")
+  }, [darkMode])
+
   // ============ YARDIMCI FONKSİYONLAR ============
-  
-  // Tarihi formatla (22 Ocak 2026 gibi)
   const formatDate = (dateString) => {
     if (!dateString) return null
-    const date = new Date(dateString)
-    return date.toLocaleDateString("tr-TR", {
-      day: "numeric",
-      month: "long",
-      year: "numeric"
+    return new Date(dateString).toLocaleDateString("tr-TR", {
+      day: "numeric", month: "short"
     })
   }
 
-  // Tarihin geçip geçmediğini kontrol et
   const isOverdue = (dateString) => {
     if (!dateString) return false
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    const dueDate = new Date(dateString)
-    return dueDate < today
+    return new Date(dateString) < today
   }
 
-  // Bugün kontrolü
   const isToday = (dateString) => {
     if (!dateString) return false
-    const today = new Date().toISOString().split('T')[0]
-    return dateString === today
+    return dateString === new Date().toISOString().split('T')[0]
+  }
+
+  const getDaysLeft = (dateString) => {
+    if (!dateString) return null
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const due = new Date(dateString)
+    const diff = Math.ceil((due - today) / (1000 * 60 * 60 * 24))
+    return diff
   }
 
   // ============ CRUD FONKSİYONLARI ============
-  
-  // Yeni görev ekle
-  const addTodo = () => {
+  const addTodo = useCallback(() => {
     if (inputValue.trim() === "") return
     
     const newTodo = {
       id: Date.now(),
       text: inputValue,
       completed: false,
-      createdAt: new Date().toISOString(),  // Oluşturulma tarihi
-      dueDate: dueDate || null,              // Son tarih
-      priority: priority                      // Öncelik
+      createdAt: new Date().toISOString(),
+      dueDate: dueDate || null,
+      priority,
+      category
     }
     
-    setTodos([...todos, newTodo])
+    setTodos(prev => [...prev, newTodo])
     setInputValue("")
     setDueDate("")
     setPriority("normal")
-  }
+  }, [inputValue, dueDate, priority, category])
 
-  // Görev sil
-  const deleteTodo = (id) => {
-    setTodos(todos.filter(todo => todo.id !== id))
-  }
+  const deleteTodo = useCallback((id) => {
+    setTodos(prev => prev.filter(todo => todo.id !== id))
+  }, [])
 
-  // Tamamlama durumunu değiştir
-  const toggleComplete = (id) => {
-    setTodos(todos.map(todo => 
-      todo.id === id ? { ...todo, completed: !todo.completed } : todo
-    ))
-  }
+  // 🎯 TAVSİYE 5: Konfeti efekti ile tamamlama
+  const toggleComplete = useCallback((id) => {
+    setTodos(prev => prev.map(todo => {
+      if (todo.id === id) {
+        const newCompleted = !todo.completed
+        // Tamamlandığında konfeti göster
+        if (newCompleted) {
+          setShowConfetti(true)
+          setTimeout(() => setShowConfetti(false), 2000)
+        }
+        return { ...todo, completed: newCompleted }
+      }
+      return todo
+    }))
+  }, [])
 
-  // Düzenleme modunu aç
   const startEditing = (todo) => {
     setEditingId(todo.id)
     setEditText(todo.text)
   }
 
-  // Düzenlemeyi kaydet
-  const saveEdit = (id) => {
+  const saveEdit = useCallback((id) => {
     if (editText.trim() === "") return
-    setTodos(todos.map(todo =>
+    setTodos(prev => prev.map(todo =>
       todo.id === id ? { ...todo, text: editText } : todo
     ))
     setEditingId(null)
     setEditText("")
-  }
+  }, [editText])
 
-  // Düzenlemeyi iptal et
   const cancelEdit = () => {
     setEditingId(null)
     setEditText("")
   }
 
-  // Enter tuşu kontrolü
   const handleKeyPress = (e) => {
     if (e.key === "Enter") addTodo()
   }
@@ -116,52 +147,111 @@ const App = () => {
     if (e.key === "Escape") cancelEdit()
   }
 
-  // Tümünü temizle
   const clearCompleted = () => {
-    setTodos(todos.filter(todo => !todo.completed))
+    setTodos(prev => prev.filter(todo => !todo.completed))
   }
 
-  // ============ FİLTRELEME ============
-  const filteredTodos = todos.filter(todo => {
-    if (filter === "active") return !todo.completed
-    if (filter === "completed") return todo.completed
-    return true
-  })
+  // ============ FİLTRELEME & SIRALAMA ============
+  const filteredTodos = todos
+    .filter(todo => {
+      // Tamamlanma durumu filtresi
+      if (filter === "active") return !todo.completed
+      if (filter === "completed") return todo.completed
+      return true
+    })
+    .filter(todo => {
+      // Kategori filtresi
+      if (categoryFilter !== "all") return todo.category === categoryFilter
+      return true
+    })
+    .filter(todo => {
+      // 🎯 TAVSİYE 3: Arama filtresi
+      if (searchQuery.trim()) {
+        return todo.text.toLowerCase().includes(searchQuery.toLowerCase())
+      }
+      return true
+    })
 
-  // Önceliğe göre sırala (high > normal > low)
   const priorityOrder = { high: 0, normal: 1, low: 2 }
-  const sortedTodos = [...filteredTodos].sort((a, b) => 
-    priorityOrder[a.priority] - priorityOrder[b.priority]
-  )
+  const sortedTodos = [...filteredTodos].sort((a, b) => {
+    // Önce tamamlanmamışlar
+    if (a.completed !== b.completed) return a.completed ? 1 : -1
+    // Sonra öncelik
+    return priorityOrder[a.priority] - priorityOrder[b.priority]
+  })
 
   // ============ İSTATİSTİKLER ============
   const totalCount = todos.length
   const completedCount = todos.filter(t => t.completed).length
   const activeCount = totalCount - completedCount
   const overdueCount = todos.filter(t => !t.completed && isOverdue(t.dueDate)).length
+  const progressPercent = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
+
+  const getCategoryInfo = (categoryId) => {
+    return CATEGORIES.find(c => c.id === categoryId) || CATEGORIES[0]
+  }
 
   // ============ JSX ============
   return (
-    <div className="app">
-      <h1>📝 Todo List</h1>
-      
+    <div className={`app ${darkMode ? "dark" : ""}`}>
+      {/* 🎯 TAVSİYE 4: Konfeti efekti */}
+      {showConfetti && (
+        <div className="confetti-container">
+          {[...Array(50)].map((_, i) => (
+            <div key={i} className="confetti" style={{
+              left: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 0.5}s`,
+              backgroundColor: ['#667eea', '#764ba2', '#f39c12', '#27ae60', '#e74c3c'][Math.floor(Math.random() * 5)]
+            }} />
+          ))}
+        </div>
+      )}
+
+      {/* Header */}
+      <header className="header">
+        <h1>✨ Todo Pro</h1>
+        {/* 🎯 TAVSİYE 2: Tema değiştirici */}
+        <button 
+          className="theme-toggle"
+          onClick={() => setDarkMode(!darkMode)}
+          title={darkMode ? "Açık Tema" : "Koyu Tema"}
+        >
+          {darkMode ? "☀️" : "🌙"}
+        </button>
+      </header>
+
+      {/* 🎯 TAVSİYE 6: İlerleme çubuğu */}
+      <div className="progress-container">
+        <div className="progress-bar">
+          <div 
+            className="progress-fill" 
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+        <span className="progress-text">
+          {progressPercent}% tamamlandı ({completedCount}/{totalCount})
+        </span>
+      </div>
+
       {/* Ekleme Formu */}
       <div className="add-form">
         <div className="input-row">
           <input
             type="text"
-            placeholder="Yeni görev ekle..."
+            placeholder="Ne yapman gerekiyor?"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
             className="main-input"
           />
-          <button onClick={addTodo} className="add-btn">Ekle</button>
+          <button onClick={addTodo} className="add-btn">
+            <span>+</span>
+          </button>
         </div>
         
         <div className="options-row">
           <div className="option">
-            <label>📅 Son Tarih:</label>
+            <label>📅</label>
             <input
               type="date"
               value={dueDate}
@@ -171,145 +261,208 @@ const App = () => {
           </div>
           
           <div className="option">
-            <label>⚡ Öncelik:</label>
+            <label>⚡</label>
             <select value={priority} onChange={(e) => setPriority(e.target.value)}>
-              <option value="low">Düşük</option>
-              <option value="normal">Normal</option>
-              <option value="high">Yüksek</option>
+              {PRIORITIES.map(p => (
+                <option key={p.id} value={p.id}>{p.emoji} {p.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="option">
+            <label>📁</label>
+            <select value={category} onChange={(e) => setCategory(e.target.value)}>
+              {CATEGORIES.map(c => (
+                <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>
+              ))}
             </select>
           </div>
         </div>
       </div>
 
+      {/* 🎯 TAVSİYE 3: Arama */}
+      <div className="search-container">
+        <span className="search-icon">🔍</span>
+        <input
+          type="text"
+          placeholder="Görev ara..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="search-input"
+        />
+        {searchQuery && (
+          <button className="clear-search" onClick={() => setSearchQuery("")}>✕</button>
+        )}
+      </div>
+
       {/* Filtre Butonları */}
-      <div className="filters">
-        <button 
-          className={filter === "all" ? "active" : ""}
-          onClick={() => setFilter("all")}
-        >
-          Tümü ({totalCount})
-        </button>
-        <button 
-          className={filter === "active" ? "active" : ""}
-          onClick={() => setFilter("active")}
-        >
-          Aktif ({activeCount})
-        </button>
-        <button 
-          className={filter === "completed" ? "active" : ""}
-          onClick={() => setFilter("completed")}
-        >
-          Tamamlanan ({completedCount})
-        </button>
+      <div className="filter-section">
+        <div className="filters">
+          <button 
+            className={filter === "all" ? "active" : ""}
+            onClick={() => setFilter("all")}
+          >
+            Tümü
+          </button>
+          <button 
+            className={filter === "active" ? "active" : ""}
+            onClick={() => setFilter("active")}
+          >
+            Aktif
+          </button>
+          <button 
+            className={filter === "completed" ? "active" : ""}
+            onClick={() => setFilter("completed")}
+          >
+            Bitti
+          </button>
+        </div>
+
+        {/* Kategori Filtreleri */}
+        <div className="category-filters">
+          <button 
+            className={`category-btn ${categoryFilter === "all" ? "active" : ""}`}
+            onClick={() => setCategoryFilter("all")}
+          >
+            Tümü
+          </button>
+          {CATEGORIES.map(c => (
+            <button
+              key={c.id}
+              className={`category-btn ${categoryFilter === c.id ? "active" : ""}`}
+              onClick={() => setCategoryFilter(c.id)}
+              style={{ "--cat-color": c.color }}
+            >
+              {c.emoji}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Görev Listesi */}
       <ul className="todo-list">
         {sortedTodos.length === 0 ? (
           <li className="empty-state">
-            {filter === "all" ? "🎉 Henüz görev yok. Bir tane ekle!" : 
-             filter === "active" ? "✅ Tüm görevler tamamlandı!" :
-             "📋 Henüz tamamlanan görev yok"}
+            <span className="empty-emoji">📋</span>
+            <span>
+              {searchQuery ? "Arama sonucu bulunamadı" : 
+               filter === "all" ? "Görev listesi boş" : 
+               filter === "active" ? "Tüm görevler tamamlandı!" :
+               "Henüz tamamlanan görev yok"}
+            </span>
           </li>
         ) : (
-          sortedTodos.map(todo => (
-            <li 
-              key={todo.id} 
-              className={`
-                ${todo.completed ? "completed" : ""} 
-                ${isOverdue(todo.dueDate) && !todo.completed ? "overdue" : ""}
-                priority-${todo.priority}
-              `}
-            >
-              <input
-                type="checkbox"
-                checked={todo.completed}
-                onChange={() => toggleComplete(todo.id)}
-              />
-              
-              <div className="todo-content">
-                {editingId === todo.id ? (
+          sortedTodos.map(todo => {
+            const catInfo = getCategoryInfo(todo.category)
+            const daysLeft = getDaysLeft(todo.dueDate)
+            
+            return (
+              <li 
+                key={todo.id} 
+                className={`
+                  todo-item
+                  ${todo.completed ? "completed" : ""} 
+                  ${isOverdue(todo.dueDate) && !todo.completed ? "overdue" : ""}
+                  priority-${todo.priority}
+                `}
+                style={{ "--cat-color": catInfo.color }}
+              >
+                {/* Kategori göstergesi */}
+                <div className="category-indicator" title={catInfo.name} />
+                
+                <label className="checkbox-container">
                   <input
-                    type="text"
-                    value={editText}
-                    onChange={(e) => setEditText(e.target.value)}
-                    onKeyDown={(e) => handleEditKeyPress(e, todo.id)}
-                    autoFocus
-                    className="edit-input"
+                    type="checkbox"
+                    checked={todo.completed}
+                    onChange={() => toggleComplete(todo.id)}
                   />
-                ) : (
-                  <>
-                    <span className="todo-text">{todo.text}</span>
-                    <div className="todo-meta">
-                      {/* Öncelik etiketi */}
-                      <span className={`priority-badge ${todo.priority}`}>
-                        {todo.priority === "high" ? "🔴 Yüksek" : 
-                         todo.priority === "low" ? "🟢 Düşük" : "🟡 Normal"}
-                      </span>
-                      
-                      {/* Son tarih */}
-                      {todo.dueDate && (
-                        <span className={`due-date ${isOverdue(todo.dueDate) && !todo.completed ? "overdue" : ""} ${isToday(todo.dueDate) ? "today" : ""}`}>
-                          📅 {isToday(todo.dueDate) ? "Bugün" : formatDate(todo.dueDate)}
-                          {isOverdue(todo.dueDate) && !todo.completed && " ⚠️"}
+                  <span className="checkmark" />
+                </label>
+                
+                <div className="todo-content">
+                  {editingId === todo.id ? (
+                    <input
+                      type="text"
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      onKeyDown={(e) => handleEditKeyPress(e, todo.id)}
+                      autoFocus
+                      className="edit-input"
+                    />
+                  ) : (
+                    <>
+                      <span className="todo-text">{todo.text}</span>
+                      <div className="todo-meta">
+                        <span className={`priority-badge ${todo.priority}`}>
+                          {PRIORITIES.find(p => p.id === todo.priority)?.emoji}
                         </span>
-                      )}
-                      
-                      {/* Oluşturulma tarihi */}
-                      <span className="created-date">
-                        🕐 {formatDate(todo.createdAt.split('T')[0])}
-                      </span>
-                    </div>
-                  </>
-                )}
-              </div>
-              
-              <div className="todo-actions">
-                {editingId === todo.id ? (
-                  <>
-                    <button onClick={() => saveEdit(todo.id)} className="save-btn">✓</button>
-                    <button onClick={cancelEdit} className="cancel-btn">✕</button>
-                  </>
-                ) : (
-                  <>
-                    <button onClick={() => startEditing(todo)} className="edit-btn">✏️</button>
-                    <button onClick={() => deleteTodo(todo.id)} className="delete-btn">🗑️</button>
-                  </>
-                )}
-              </div>
-            </li>
-          ))
+                        
+                        <span className="category-badge">
+                          {catInfo.emoji} {catInfo.name}
+                        </span>
+                        
+                        {todo.dueDate && (
+                          <span className={`due-date ${isOverdue(todo.dueDate) && !todo.completed ? "overdue" : ""} ${isToday(todo.dueDate) ? "today" : ""}`}>
+                            📅 {isToday(todo.dueDate) ? "Bugün" : formatDate(todo.dueDate)}
+                            {daysLeft !== null && daysLeft > 0 && daysLeft <= 3 && !todo.completed && (
+                              <span className="days-left"> ({daysLeft} gün)</span>
+                            )}
+                            {isOverdue(todo.dueDate) && !todo.completed && " ⚠️"}
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </div>
+                
+                <div className="todo-actions">
+                  {editingId === todo.id ? (
+                    <>
+                      <button onClick={() => saveEdit(todo.id)} className="action-btn save">✓</button>
+                      <button onClick={cancelEdit} className="action-btn cancel">✕</button>
+                    </>
+                  ) : (
+                    <>
+                      <button onClick={() => startEditing(todo)} className="action-btn edit">✏️</button>
+                      <button onClick={() => deleteTodo(todo.id)} className="action-btn delete">🗑️</button>
+                    </>
+                  )}
+                </div>
+              </li>
+            )
+          })
         )}
       </ul>
 
       {/* İstatistikler */}
       <div className="stats">
         <div className="stat-item">
-          <span className="stat-number">{totalCount}</span>
-          <span className="stat-label">Toplam</span>
-        </div>
-        <div className="stat-item">
           <span className="stat-number">{activeCount}</span>
           <span className="stat-label">Aktif</span>
         </div>
-        <div className="stat-item">
+        <div className="stat-item completed-stat">
           <span className="stat-number">{completedCount}</span>
-          <span className="stat-label">Tamamlanan</span>
+          <span className="stat-label">Bitti</span>
         </div>
         {overdueCount > 0 && (
-          <div className="stat-item overdue">
+          <div className="stat-item overdue-stat">
             <span className="stat-number">{overdueCount}</span>
             <span className="stat-label">Gecikmiş</span>
           </div>
         )}
       </div>
 
-      {/* Tamamlananları Temizle */}
+      {/* Alt Aksiyonlar */}
       {completedCount > 0 && (
         <button onClick={clearCompleted} className="clear-btn">
-          🧹 Tamamlananları Temizle
+          🧹 Tamamlananları Temizle ({completedCount})
         </button>
       )}
+
+      {/* Footer */}
+      <footer className="footer">
+        <span>React ile yapıldı 💜</span>
+      </footer>
     </div>
   )
 }
